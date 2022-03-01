@@ -17,13 +17,11 @@ const pairA = generateKeyPair();
 const pairB = generateKeyPair();
 
 const sharedA = box.before(pairB.publicKey, pairA.secretKey);
-const sharedB = box.before(pairA.publicKey, pairB.secretKey);
-
 const encrypted = encrypt(sharedA, obj);
-const decrypted = decrypt(sharedB, encrypted);
-console.log(obj, encrypted, decrypted);
 
-// console.log(randomBytes(secretbox.nonceLength));
+const sharedB = box.before(pairA.publicKey, pairB.secretKey);
+const decrypted = decrypt(sharedB, encrypted);
+// console.log(obj, encrypted, decrypted);
 
 function App() {
   const [user, setUser] = useState();

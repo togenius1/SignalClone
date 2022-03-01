@@ -13,11 +13,13 @@ import Icon from 'react-native-vector-icons/dist/Ionicons';
 import {Auth, DataStore, Storage} from 'aws-amplify';
 import {User} from '../../src/models';
 import {S3Image} from 'aws-amplify-react-native';
+import {box} from 'tweetnacl';
 
 import AudioPlayer from '../../AudioPlayer/AudioPlayer';
 import {Message as MessageModel} from '../../src/models';
 import MessageReply from '../MessageReply/MessageReply';
 import ActionSheet from '../ActionSheet/ActionSheet';
+import {stringToUint8Array, getMySecretKey, decrypt} from '../../utils/crypto';
 
 const blue = '#3777f0';
 const grey = 'lightgrey';
@@ -26,6 +28,7 @@ const Message = props => {
   const {setAsMessageReply, message: propMessage} = props;
 
   const [message, setMessage] = useState(propMessage);
+  const [decryptedContent, setDecryptedContent] = useState('');
   const [repliedTo, setRepliedTo] = useState();
   const [user, setUser] = useState();
   const [isMe, setIsMe] = useState(null);
@@ -89,6 +92,27 @@ const Message = props => {
       Storage.get(message.audio).then(setSoundURI);
     }
   }, [message]);
+
+  useEffect(() => {
+    if (!message?.content || !user?.publicKey) {
+      return;
+    }
+
+    const decryptMessage = async () => {
+      const myKey = await getMySecretKey();
+      if (!myKey) {
+        return;
+      }
+      // decrypt message.content
+      const sharedKey = box.before(stringToUint8Array(user.publicKey), myKey);
+      // console.log('sharedKey', sharedKey);
+      const decrypted = decrypt(sharedKey, message.content);
+      // console.log('decrypted', decrypted);
+      setDecryptedContent(decrypted.message);
+    };
+
+    decryptMessage();
+  }, [message, user]);
 
   useEffect(() => {
     const checkIfMe = async () => {
@@ -167,9 +191,9 @@ const Message = props => {
 
           {soundURI && <AudioPlayer soundURI={soundURI} />}
 
-          {!!message.content && (
+          {!!decryptedContent && (
             <Text style={{color: isMe ? 'black' : 'white'}}>
-              {isDeleted ? 'message deleted' : message.content}
+              {isDeleted ? 'message deleted' : decryptedContent}
             </Text>
           )}
 

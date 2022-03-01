@@ -6,7 +6,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import {useRoute} from '@react-navigation/native';
-import {DataStore, SortDirection} from 'aws-amplify';
+import {Auth, DataStore, SortDirection} from 'aws-amplify';
 import {ChatRoom, Message as MessageModel} from '../src/models';
 
 import Message from '../components/message/Message';
@@ -55,9 +55,12 @@ const ChatRoomScreen = () => {
     if (!chatRoom) {
       return;
     }
+    const authUser = await Auth.currentAuthenticatedUser();
+    const myId = authUser.attributes.sub;
+    
     const fetchedMessages = await DataStore.query(
       MessageModel,
-      message => message.chatroomID('eq', chatRoom?.id),
+      message => message.chatroomID('eq', chatRoom?.id).forUserId('eq', myId),
       {
         sort: message => message.createdAt(SortDirection.DESCENDING),
       },

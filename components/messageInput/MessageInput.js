@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState} from 'react';
 import {
   StyleSheet,
   Text,
@@ -9,17 +9,13 @@ import {
   Platform,
   Image,
   PermissionsAndroid,
-  Dimensions,
+  Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/dist/Ionicons';
 import {Auth, DataStore, Storage} from 'aws-amplify';
-import {Message, ChatRoom} from '../../src/models';
-import EmojiSelector, {Categories} from 'react-native-emoji-selector';
+import EmojiSelector from 'react-native-emoji-selector';
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
-
 import {v4 as uuidv4} from 'uuid';
-
-import MessageComponent from '../message/Message';
 import AudioRecorderPlayer, {
   AVEncoderAudioQualityIOSType,
   AVEncodingOption,
@@ -30,7 +26,13 @@ import AudioRecorderPlayer, {
   RecordBackType,
 } from 'react-native-audio-recorder-player';
 import RNFetchBlob from 'rn-fetch-blob';
+import {useNavigation} from '@react-navigation/native';
+import {box} from 'tweetnacl';
+
+import {Message, ChatRoom, ChatRoomUser} from '../../src/models';
+import MessageComponent from '../message/Message';
 import AudioPlayer from '../../AudioPlayer/AudioPlayer';
+import {encrypt, stringToUint8Array, getMySecretKey} from '../../utils/crypto';
 
 const state = {
   isLoggingIn: false,
@@ -53,6 +55,8 @@ const MessageInput = ({chatRoom, messageReplyTo, removeMessageReplyTo}) => {
   const [progress, setProgress] = useState(0);
   const [soundURI, setSoundURI] = useState(null);
   const [sound, setSound] = useState(state);
+
+  const navigation = useNavigation();
 
   const requestPermission = async () => {
     if (Platform.OS === 'android') {
@@ -193,34 +197,6 @@ const MessageInput = ({chatRoom, messageReplyTo, removeMessageReplyTo}) => {
     });
   };
 
-  const resetFields = () => {
-    setMessage('');
-    setIsEmojiPickerOpen(false);
-    setImage(null);
-    setProgress(0);
-    setSoundURI(null);
-    removeMessageReplyTo();
-  };
-
-  // Send Message
-  const sendMessage = async () => {
-    // console.warn('sending: ', message);
-    const user = await Auth.currentAuthenticatedUser();
-    const newMessage = await DataStore.save(
-      new Message({
-        content: message,
-        userID: user.attributes.sub,
-        chatroomID: chatRoom.id,
-        status: 'SENT',
-        replyToMessageID: messageReplyTo?.id,
-      }),
-    );
-
-    updateLastMessage(newMessage);
-
-    resetFields();
-  };
-
   const updateLastMessage = async newMessage => {
     DataStore.save(
       ChatRoom.copyOf(chatRoom, updatedChatRoom => {
@@ -246,17 +222,70 @@ const MessageInput = ({chatRoom, messageReplyTo, removeMessageReplyTo}) => {
     // }
   };
 
-  const progressCallback = progress => {
-    // console.log(`Uploaded: ${progress.loaded}/${progress.total}`);
-    setProgress(progress.loaded / progress.total);
-  };
-
   const getBlob = async uri => {
     const response = await fetch(uri);
     const blob = await response.blob();
     return blob;
   };
 
+  // Send Message to user
+  const sendMessageToUser = async (user, fromUserId) => {
+    const ourSecretKey = await getMySecretKey();
+    if (!ourSecretKey) {
+      return;
+    }
+
+    if (!user.publicKey) {
+      Alert.alert(
+        "You haven't set his keypair yet",
+        'Until the user generates the keypair, you cannot send him messages',
+      );
+      return;
+    }
+
+    // console.log('private key ', ourSecretKey);
+    const sharedKey = box.before(
+      stringToUint8Array(user.publicKey),
+      ourSecretKey,
+    );
+    // console.log('shared key ', sharedKey);
+
+    const encryptedMessage = encrypt(sharedKey, {message});
+    // console.log('encrypted message ', encryptedMessage);
+
+    const newMessage = await DataStore.save(
+      new Message({
+        content: encryptedMessage, // <-- this message should be encrypted
+        userID: fromUserId,
+        forUserId: user.id,
+        chatroomID: chatRoom.id,
+        status: 'SENT',
+        replyToMessageID: messageReplyTo?.id,
+      }),
+    );
+    // updateLastMessage(newMessage);
+  };
+
+  // Send Message
+  const sendMessage = async () => {
+    // get all the users of this chat room
+    const authUser = await Auth.currentAuthenticatedUser();
+
+    const users = (await DataStore.query(ChatRoomUser))
+      .filter(cru => cru.chatRoom.id === chatRoom.id)
+      .map(cru => cru.user);
+
+    console.log('users' + users);
+
+    // for each user, encrypt the 'content' with his public key, and save it as a new message
+    await Promise.all(
+      users.map(user => sendMessageToUser(user, authUser.attributes.sub)),
+    );
+
+    resetFields();
+  };
+
+  // Send Image
   const sendImage = async () => {
     // console.log('Image: ' + JSON.stringify(image.assets[0].uri));
     if (!image) {
@@ -267,7 +296,7 @@ const MessageInput = ({chatRoom, messageReplyTo, removeMessageReplyTo}) => {
       progressCallback,
     });
 
-    // Send Message
+    // Send Image with Message
     const user = await Auth.currentAuthenticatedUser();
     const newMessage = await DataStore.save(
       new Message({
@@ -283,6 +312,7 @@ const MessageInput = ({chatRoom, messageReplyTo, removeMessageReplyTo}) => {
     resetFields();
   };
 
+  // Send Audio
   const sendAudio = async () => {
     console.log('soundURI: ' + soundURI);
 
@@ -296,7 +326,7 @@ const MessageInput = ({chatRoom, messageReplyTo, removeMessageReplyTo}) => {
       progressCallback,
     });
 
-    // Send Message
+    // Send Audio with Message
     const user = await Auth.currentAuthenticatedUser();
     const newMessage = await DataStore.save(
       new Message({
@@ -310,6 +340,20 @@ const MessageInput = ({chatRoom, messageReplyTo, removeMessageReplyTo}) => {
     updateLastMessage(newMessage);
 
     resetFields();
+  };
+
+  const progressCallback = progress => {
+    // console.log(`Uploaded: ${progress.loaded}/${progress.total}`);
+    setProgress(progress.loaded / progress.total);
+  };
+
+  const resetFields = () => {
+    setMessage('');
+    setIsEmojiPickerOpen(false);
+    setImage(null);
+    setProgress(0);
+    setSoundURI(null);
+    removeMessageReplyTo();
   };
 
   return (

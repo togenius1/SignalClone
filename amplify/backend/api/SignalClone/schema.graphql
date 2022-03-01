@@ -13,6 +13,7 @@ type Message @model @auth(rules: [{allow: public}]) {
   chatroomID: ID @index(name: "byChatRoom")
   status: MessageStatus
   replyToMessageID: ID
+  forUserId: ID
 }
 
 type ChatRoom @model @auth(rules: [{allow: public}]) {
@@ -35,6 +36,5 @@ type User @model @auth(rules: [{allow: public}]) {
   chatrooms: [ChatRoom] @manyToMany(relationName: "ChatRoomUser")
   lastOnlineAt: AWSTimestamp
   publicKey: String
-  ForUser: Message @hasOne
 }
  
