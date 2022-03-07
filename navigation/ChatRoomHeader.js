@@ -9,7 +9,8 @@ import {
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/dist/Feather';
-import {Auth, DataStore} from 'aws-amplify';
+import {Auth} from '@aws-amplify/auth';
+import {DataStore} from '@aws-amplify/datastore';
 import {ChatRoom, ChatRoomUser, User} from '../src/models';
 import moment from 'moment';
 

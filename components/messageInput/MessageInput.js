@@ -58,40 +58,6 @@ const MessageInput = ({chatRoom, messageReplyTo, removeMessageReplyTo}) => {
 
   const navigation = useNavigation();
 
-  const requestPermission = async () => {
-    if (Platform.OS === 'android') {
-      try {
-        const grants = await PermissionsAndroid.requestMultiple([
-          PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
-          PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
-          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-          PermissionsAndroid.PERMISSIONS.CAMERA,
-        ]);
-
-        console.log('write external stroage', grants);
-
-        if (
-          grants['android.permission.WRITE_EXTERNAL_STORAGE'] ===
-            PermissionsAndroid.RESULTS.GRANTED &&
-          grants['android.permission.READ_EXTERNAL_STORAGE'] ===
-            PermissionsAndroid.RESULTS.GRANTED &&
-          grants['android.permission.RECORD_AUDIO'] ===
-            PermissionsAndroid.RESULTS.GRANTED &&
-          grants['android.permission.CAMERA'] ===
-            PermissionsAndroid.RESULTS.GRANTED
-        ) {
-          console.log('Permissions granted');
-        } else {
-          console.log('All required permissions not granted');
-          return;
-        }
-      } catch (err) {
-        console.warn(err);
-        return;
-      }
-    }
-  };
-
   const dirs = RNFetchBlob.fs.dirs;
   const path = Platform.select({
     ios: 'hello.m4a',
@@ -209,19 +175,6 @@ const MessageInput = ({chatRoom, messageReplyTo, removeMessageReplyTo}) => {
   //   console.log('On plus clicked');
   // };
 
-  const onPress = () => {
-    if (image) {
-      sendImage();
-    } else if (soundURI) {
-      sendAudio();
-    } else if (message) {
-      sendMessage();
-    }
-    // else {
-    //   onPlusClicked();
-    // }
-  };
-
   const getBlob = async uri => {
     const response = await fetch(uri);
     const blob = await response.blob();
@@ -314,7 +267,7 @@ const MessageInput = ({chatRoom, messageReplyTo, removeMessageReplyTo}) => {
 
   // Send Audio
   const sendAudio = async () => {
-    console.log('soundURI: ' + soundURI);
+    // console.log('soundURI: ' + soundURI);
 
     if (!soundURI) {
       return;
@@ -356,6 +309,17 @@ const MessageInput = ({chatRoom, messageReplyTo, removeMessageReplyTo}) => {
     removeMessageReplyTo();
   };
 
+  const onPress = () => {
+    if (image) {
+      sendImage();
+    } else if (soundURI) {
+      sendAudio();
+    } else if (message) {
+      sendMessage();
+    } else {
+      // onPlusClicked();
+    }
+  };
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
