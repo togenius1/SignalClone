@@ -1,0 +1,54 @@
+{
+  "name": "signalclone",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "android": "react-native run-android",
+    "ios": "react-native run-ios",
+    "start": "react-native start",
+    "test": "jest",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "^1.16.1",
+    "@react-native-community/netinfo": "^8.0.0",
+    "@react-native-picker/picker": "^2.3.0",
+    "@react-navigation/native": "^6.0.8",
+    "@react-navigation/native-stack": "^6.5.0",
+    "@stablelib/base64": "^1.0.1",
+    "@stablelib/utf8": "^1.0.1",
+    "amazon-cognito-identity-js": "^5.2.6",
+    "aws-amplify": "^4.3.14",
+    "aws-amplify-react-native": "^6.0.2",
+    "moment": "^2.29.1",
+    "react": "18.2.0",
+    "react-native": "0.71.3",
+    "react-native-actions-sheet": "^0.6.0",
+    "react-native-async-storage": "^0.0.1",
+    "react-native-audio-recorder-player": "^3.3.4",
+    "react-native-emoji-selector": "^0.2.0",
+    "react-native-get-random-values": "^1.7.2",
+    "react-native-image-picker": "^4.7.3",
+    "react-native-permissions": "^3.3.0",
+    "react-native-randombytes": "^3.6.1",
+    "react-native-safe-area-context": "^4.0.1",
+    "react-native-screens": "^3.12.0",
+    "react-native-vector-icons": "^9.1.0",
+    "rn-fetch-blob": "^0.12.0",
+    "tweetnacl": "^1.0.3",
+    "uuid": "^8.3.2"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.12.9",
+    "@babel/runtime": "^7.12.5",
+    "@react-native-community/eslint-config": "^2.0.0",
+    "babel-jest": "^26.6.3",
+    "eslint": "7.14.0",
+    "jest": "^26.6.3",
+    "metro-react-native-babel-preset": "^0.66.2",
+    "react-test-renderer": "17.0.2"
+  },
+  "jest": {
+    "preset": "react-native"
+  }
+}
